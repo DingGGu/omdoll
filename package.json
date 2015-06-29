@@ -1,0 +1,20 @@
+{
+  "name": "omdoll",
+  "version": "1.0.0",
+  "description": "M16 Omdoll Bot",
+  "main": "omdoll.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DingGGu/omdoll.git/"
+  },
+  "keywords": [
+    "omdoll"
+  ],
+  "author": "DingGGu",
+  "dependencies": {
+    "irc": "^0.3.12"
+  }
+}
