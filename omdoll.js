@@ -26,22 +26,22 @@ _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
     }
 });
 
-//_sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
-//    if (err) console.error(err);
-//    else {
-//        async.forEach(rows, function(item, callback) {
-//            if (item.ipban == "true") {
-//                omdoll.send("BOTBANIP", item.channel, item.ban);
-//                callback();
-//            } else {
-//                omdoll.send("BOTBAN", item.channel, item.ban);
-//                callback();
-//            }
-//        }, function(err) {
-//            if (err) console.error(err);
-//        });
-//    }
-//});
+_sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
+    if (err) console.error(err);
+    else {
+        async.forEach(rows, function(item, callback) {
+            if (item.ipban == "true") {
+                omdoll.send("BOTBANIP", item.channel, item.ban);
+                callback();
+            } else {
+                omdoll.send("BOTBAN", item.channel, item.ban);
+                callback();
+            }
+        }, function(err) {
+            if (err) console.error(err);
+        });
+    }
+});
 
 omdoll.addListener('message', function(from, to, message) {
     if (message.indexOf('-clanbanip') > -1 ) {
@@ -112,6 +112,10 @@ omdoll.addListener('message', function(from, to, message) {
                 }
             });
         }
+    }
+
+    if (message.indexOf('-명령어') > -1) {
+        omdoll.say(from, "그런거 몰라융 아직 만들고 있단 말이에요! (v20150630)");
     }
 });
 
