@@ -13,7 +13,7 @@ var omdoll = new irc.Client("localhost", "옴도리", config);
 /*
  * @ M16 Announce TIP
  */
-new CronJob("* 30 * * * *", function() {
+new CronJob("0 30 * * * *", function() {
     console.log("HELLO");
     omdoll.send("ANN2", "[TIP] " + tip[Math.floor(Math.random() * tip.length)]);
 }, null, true);
