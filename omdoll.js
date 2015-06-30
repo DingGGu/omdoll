@@ -5,13 +5,27 @@ var irc = require('irc'),
     config = require('./config');
 
 var async = require('async');
+var CronJob = require('cron').CronJob,
+    tip = require('./tip');
 
-var omdoll = new irc.Client("localhost", "클랜봇", config);
+var omdoll = new irc.Client("localhost", "옴도리", config);
+
+/*
+ * @ M16 Announce TIP
+ */
+new CronJob("* 30 * * * *", function() {
+    console.log("HELLO");
+    omdoll.send("ANN2", "[TIP] " + tip[Math.floor(Math.random() * tip.length)]);
+}, null, true);
+
 
 function c2s (short) {
     return "#Clan_"+String.fromCharCode(short>>24,short>>16&0xff,short>>8&0xff,short&0xff);
 }
 
+/*
+ * @ Omdoll Join Clan Channel
+ */
 _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
     if (err) console.error(err);
     else {
@@ -26,6 +40,9 @@ _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
     }
 });
 
+/*
+ * @ Omdoll Execute Banned Users
+ */
 _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
     if (err) console.error(err);
     else {
@@ -85,9 +102,17 @@ omdoll.addListener('message', function(from, to, message) {
     }
 
     if (message.indexOf('-인사') > -1) {
+        console.log(message);
         var msg = message.split(" ");
         if (msg.length < 2) {
             omdoll.say(from, "-인사 <인삿말> 로 입력하세요.");
+        } else if (msg[1] == "삭제") {
+            _sql.query("DELETE FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(from), function(err, rows) {
+                if (err) return omdoll.say(from, "ERROR! - 01 SQL Connection");
+                else {
+                    omdoll.say(from, "삭제했어요.");
+                }
+            });
         } else {
             var obj = {
                 "user_id": from,
@@ -99,14 +124,14 @@ omdoll.addListener('message', function(from, to, message) {
                     _sql.query("UPDATE `pvpgn_omdoll_hello` SET `message` = ? WHERE `user_id` = ?", [msg[1], from], function(err) {
                         if (err) omdoll.say(from, "ERROR! - 01 SQL Connection");
                         else {
-                            omdoll.say(from, "설정 되었습니다.");
+                            omdoll.say(from, "설정 되었습니다. (-인사 삭제)로 삭제 할 수 있어요.");
                         }
                     });
                 } else {
                     _sql.query("INSERT INTO `pvpgn_omdoll_hello` SET ?", obj, function(err) {
                         if (err) omdoll.say(from, "ERROR! - 01 SQL Connection");
                         else {
-                            omdoll.say(from, "설정 되었습니다.");
+                            omdoll.say(from, "설정 되었습니다. (-인사 삭제)로 삭제 할 수 있어요.");
                         }
                     });
                 }
@@ -120,8 +145,9 @@ omdoll.addListener('message', function(from, to, message) {
 });
 
 omdoll.addListener('join', function(channel, nick) {
-    if (typeof(nick) == "undefined") return;
+    if (typeof(nick) == "undefined" || nick == "옴도리") return;
     _sql.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(nick), function(err, rows) {
+        if (err) return console.error(err);
         if (rows.length) {
             omdoll.say(channel, "["+nick+"] " + rows[0].message);
         }
