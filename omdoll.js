@@ -31,11 +31,12 @@ _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
     else {
         async.forEach(rows, function(item, callback) {
             omdoll.join(c2s(item.short), function() {
-                omdoll.say(c2s(item.short), "Initializing Ban Configuration");
+                omdoll.say(c2s(item.short), "안뇽, 내 이름은 옴도리!");
             });
             callback();
         }, function(err) {
             if (err) console.error(err);
+            console.log("[Omdoll] Complete Clan Channel Join");
         });
     }
 });
@@ -56,6 +57,25 @@ _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
             }
         }, function(err) {
             if (err) console.error(err);
+            console.log("[Omdoll] Complete Execute Clan Banned Users");
+        });
+    }
+});
+
+/*
+ * @ Omdoll Join Personal Channel
+ */
+_sql.query("SELECT `perch_name` FROM `pvpgn_omdoll_personal_channel`", function(err, rows) {
+    if (err) console.error(err);
+    else {
+        async.forEach(rows, function(item, callback) {
+            omdoll.join("#"+item.perch_name, function() {
+                omdoll.say(item.perch_name, "안뇽, 내 이름은 옴도리!");
+            });
+            callback();
+        }, function(err) {
+            if (err) console.error(err);
+            console.log("[Omdoll] Complete Personal Channel Join");
         });
     }
 });
@@ -102,7 +122,6 @@ omdoll.addListener('message', function(from, to, message) {
     }
 
     if (message.indexOf('-인사') > -1) {
-        console.log(message);
         var msg = message.split(" ");
         if (msg.length < 2) {
             omdoll.say(from, "-인사 <인삿말> 로 입력하세요.");
@@ -150,6 +169,12 @@ omdoll.addListener('join', function(channel, nick) {
         if (err) return console.error(err);
         if (rows.length) {
             omdoll.say(channel, "["+nick+"] " + rows[0].message);
+        }
+    });
+    _sql.query("SELECT * FROM `pvpgn_omdoll_personal_channel` WHERE `user_id` = ? AND `perch_name` = ? ", [nick, channel], function(err, rows) {
+        if (err) return console.error(err);
+        if (rows.length) {
+            omdoll.send("BOTTMPOP", channel, nick);
         }
     });
 });
