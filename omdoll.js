@@ -164,16 +164,65 @@ omdoll.addListener('message', function(from, to, message) {
 
 omdoll.addListener('join', function(channel, nick) {
     if (typeof(nick) == "undefined" || nick == "옴도리") return;
-    _sql.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(nick), function(err, rows) {
-        if (err) return console.error(err);
-        if (rows.length) {
-            omdoll.say(channel, "["+nick+"] " + rows[0].message);
-        }
-    });
-    _sql.query("SELECT * FROM `pvpgn_omdoll_personal_channel` WHERE `user_id` = ? AND `perch_name` = ? ", [nick, channel], function(err, rows) {
-        if (err) return console.error(err);
-        if (rows.length) {
-            omdoll.send("BOTTMPOP", channel, nick);
-        }
-    });
+
+
+    if (channel == "#Android") {
+        _sql.query("SELECT * FROM `pvpgn_iconshop_member` WHERE `user_id` = ? AND `title` = 'SP11'", [nick], function(err, rows) {
+            if (err) return console.error(err);
+            if (rows.length) return omdoll.say(nick, "이벤트 아이콘이 이미 지급되어 있네요.");
+            else {
+                var auth;
+                _sql.query("SELECT * FROM `pvpgn_member` WHERE `user_id` = ? ", [nick], function(err, rows) {
+                    if (err) return omdoll.say(nick, "정보를 가져오는 도중 오류가 발생했어요.");
+                    else {
+                        auth = rows[0];
+                        _sql.query("INSERT INTO `pvpgn_sequence` (seq) values ('0')", function(err, rows) {
+                            if (err) return omdoll.say(nick, "입력하는 도중 오류가 발생했어요.");
+                            else {
+                                var obj = {
+                                    "uid": auth.uid,
+                                    "data_srl": rows.insertId,
+                                    "icon_srl": 18866326,
+                                    "title": "SP11",
+                                    "member_srl": auth.uid,
+                                    "user_id": auth.user_id,
+                                    "nick_name": auth.nick_name,
+                                    "is_selected": "N",
+                                    "ipaddress": "0.0.0.0"
+                                };
+                                _sql.query("INSERT INTO `pvpgn_iconshop_member` SET ?", obj, function (err, rows) {
+                                    if (err) {
+                                        console.error(err);
+                                        omdoll.say(nick, "ERROR! - 지급 오류");
+                                    }
+                                    else {
+                                        omdoll.say(nick, "이벤트 아이콘이 지급되었어요.");
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+
+            }
+        })
+    }
+
+
+
+    else {
+        _sql.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(nick), function(err, rows) {
+            if (err) return console.error(err);
+            if (rows.length) {
+                omdoll.say(channel, "["+nick+"] " + rows[0].message);
+            }
+        });
+
+        _sql.query("SELECT * FROM `pvpgn_omdoll_personal_channel` WHERE `user_id` = ? AND `perch_name` = ? ", [nick, channel], function(err, rows) {
+            if (err) return console.error(err);
+            if (rows.length) {
+                omdoll.send("BOTTMPOP", channel, nick);
+            }
+        });
+    }
 });
