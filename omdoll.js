@@ -25,8 +25,10 @@ function c2s (short) {
 /*
  * @ Omdoll Join Clan Channel
  */
+
+
 _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
-    if (err) console.error(err);
+    if (err) console.error(err.stack);
     else {
         async.forEach(rows, function(item, callback) {
             omdoll.join(c2s(item.short), function() {
@@ -34,7 +36,7 @@ _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
             });
             callback();
         }, function(err) {
-            if (err) console.error(err);
+            if (err) console.error(err.stack);
             console.log("[Omdoll] Complete Clan Channel Join");
         });
     }
@@ -44,7 +46,7 @@ _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
  * @ Omdoll Execute Banned Users
  */
 _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
-    if (err) console.error(err);
+    if (err) console.error(err.stack);
     else {
         async.forEach(rows, function(item, callback) {
             if (item.ipban == "true") {
@@ -55,7 +57,7 @@ _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
                 callback();
             }
         }, function(err) {
-            if (err) console.error(err);
+            if (err) console.error(err.stack);
             console.log("[Omdoll] Complete Execute Clan Banned Users");
         });
     }
@@ -65,7 +67,7 @@ _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
  * @ Omdoll Join Personal Channel
  */
 _sql.query("SELECT `perch_name` FROM `pvpgn_omdoll_personal_channel`", function(err, rows) {
-    if (err) console.error(err);
+    if (err) console.error(err.stack);
     else {
         async.forEach(rows, function(item, callback) {
             omdoll.join("#"+item.perch_name, function() {
@@ -73,7 +75,7 @@ _sql.query("SELECT `perch_name` FROM `pvpgn_omdoll_personal_channel`", function(
             });
             callback();
         }, function(err) {
-            if (err) console.error(err);
+            if (err) console.error(err.stack);
             console.log("[Omdoll] Complete Personal Channel Join");
         });
     }
@@ -124,6 +126,8 @@ omdoll.addListener('message', function(from, to, message) {
         var msg = message.split(" ");
         if (msg.length < 2) {
             omdoll.say(from, "-인사 <인삿말> 로 입력하세요.");
+        } else if (from == "PLZMONEY") {
+            omdoll.say(from, "뽀큐뽀큥~");
         } else if (msg[1] == "삭제") {
             _sql.query("DELETE FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(from), function(err, rows) {
                 if (err) return omdoll.say(from, "ERROR! - 01 SQL Connection");
@@ -134,12 +138,12 @@ omdoll.addListener('message', function(from, to, message) {
         } else {
             var obj = {
                 "user_id": from,
-                "message": msg[1]
+                "message": message.substring(4)
             };
             _sql.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(from), function(err, rows) {
                 if (err) return omdoll.say(from, "ERROR! - 01 SQL Connection");
                 else if (rows.length) {
-                    _sql.query("UPDATE `pvpgn_omdoll_hello` SET `message` = ? WHERE `user_id` = ?", [msg[1], from], function(err) {
+                    _sql.query("UPDATE `pvpgn_omdoll_hello` SET `message` = ? WHERE `user_id` = ?", [message.substring(4), from], function(err) {
                         if (err) omdoll.say(from, "ERROR! - 01 SQL Connection");
                         else {
                             omdoll.say(from, "설정 되었습니다. (-인사 삭제)로 삭제 할 수 있어요.");
@@ -165,10 +169,9 @@ omdoll.addListener('message', function(from, to, message) {
 omdoll.addListener('join', function(channel, nick) {
     if (typeof(nick) == "undefined" || nick == "옴도리") return;
 
-
     if (channel == "#Android") {
         _sql.query("SELECT * FROM `pvpgn_iconshop_member` WHERE `user_id` = ? AND `title` = 'SP11'", [nick], function(err, rows) {
-            if (err) return console.error(err);
+            if (err) return console.error(err.stack);
             if (rows.length) return omdoll.say(nick, "이벤트 아이콘이 이미 지급되어 있네요.");
             else {
                 var auth;
@@ -192,7 +195,7 @@ omdoll.addListener('join', function(channel, nick) {
                                 };
                                 _sql.query("INSERT INTO `pvpgn_iconshop_member` SET ?", obj, function (err, rows) {
                                     if (err) {
-                                        console.error(err);
+                                        console.error(err.stack);
                                         omdoll.say(nick, "ERROR! - 지급 오류");
                                     }
                                     else {
@@ -209,20 +212,35 @@ omdoll.addListener('join', function(channel, nick) {
     }
 
 
-
     else {
-        _sql.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(nick), function(err, rows) {
-            if (err) return console.error(err);
-            if (rows.length) {
-                omdoll.say(channel, "["+nick+"] " + rows[0].message);
-            }
-        });
+        _sql.getConnection(function (err, conn) {
+            async.parallel([
+                function (callback) {
+                    conn.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(nick), function (err, rows) {
+                        if (err) callback(err);
+                        if (rows.length) {
+                            omdoll.say(channel, "[" + nick + "] " + rows[0].message);
+                            callback(null, null);
+                        }
+                    });
+                },
 
-        _sql.query("SELECT * FROM `pvpgn_omdoll_personal_channel` WHERE `user_id` = ? AND `perch_name` = ? ", [nick, channel], function(err, rows) {
-            if (err) return console.error(err);
-            if (rows.length) {
-                omdoll.send("BOTTMPOP", channel, nick);
-            }
+                function (callback) {
+                    conn.query("SELECT * FROM `pvpgn_omdoll_personal_channel` WHERE `user_id` = ? AND `perch_name` = ? ", [nick, channel], function (err, rows) {
+                        if (err) callback(err);
+                        if (rows.length) {
+                            omdoll.send("BOTTMPOP", channel, nick);
+                            callback(null, null);
+                        }
+                    });
+                }
+
+            ], function (err) {
+                if (err) {
+                    console.error(err.stack);
+                }
+                conn.release();
+            });
         });
     }
 });
