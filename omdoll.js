@@ -28,7 +28,7 @@ function c2s (short) {
 
 
 _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
-    if (err) console.error(err.stack);
+    if (err) omdoll.say(err.stack);
     else {
         async.forEach(rows, function(item, callback) {
             omdoll.join(c2s(item.short), function() {
@@ -46,7 +46,7 @@ _sql.query("SELECT `short` FROM `pvpgn_clan`", function(err, rows) {
  * @ Omdoll Execute Banned Users
  */
 _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
-    if (err) console.error(err.stack);
+    if (err) omdoll.say(err.stack);
     else {
         async.forEach(rows, function(item, callback) {
             if (item.ipban == "true") {
@@ -57,7 +57,7 @@ _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
                 callback();
             }
         }, function(err) {
-            if (err) console.error(err.stack);
+            if (err) omdoll.say(err.stack);
             console.log("[Omdoll] Complete Execute Clan Banned Users");
         });
     }
@@ -67,7 +67,7 @@ _sql.query("SELECT * FROM `pvpgn_channel_ban`", function(err, rows) {
  * @ Omdoll Join Personal Channel
  */
 _sql.query("SELECT `perch_name` FROM `pvpgn_omdoll_personal_channel`", function(err, rows) {
-    if (err) console.error(err.stack);
+    if (err) omdoll.say(err.stack);
     else {
         async.forEach(rows, function(item, callback) {
             omdoll.join("#"+item.perch_name, function() {
@@ -75,7 +75,7 @@ _sql.query("SELECT `perch_name` FROM `pvpgn_omdoll_personal_channel`", function(
             });
             callback();
         }, function(err) {
-            if (err) console.error(err.stack);
+            if (err) omdoll.say(err.stack);
             console.log("[Omdoll] Complete Personal Channel Join");
         });
     }
@@ -169,78 +169,34 @@ omdoll.addListener('message', function(from, to, message) {
 omdoll.addListener('join', function(channel, nick) {
     if (typeof(nick) == "undefined" || nick == "옴도리") return;
 
-    if (channel == "#Android") {
-        _sql.query("SELECT * FROM `pvpgn_iconshop_member` WHERE `user_id` = ? AND `title` = 'SP11'", [nick], function(err, rows) {
-            if (err) return console.error(err.stack);
-            if (rows.length) return omdoll.say(nick, "이벤트 아이콘이 이미 지급되어 있네요.");
-            else {
-                var auth;
-                _sql.query("SELECT * FROM `pvpgn_member` WHERE `user_id` = ? ", [nick], function(err, rows) {
-                    if (err) return omdoll.say(nick, "정보를 가져오는 도중 오류가 발생했어요.");
-                    else {
-                        auth = rows[0];
-                        _sql.query("INSERT INTO `pvpgn_sequence` (seq) values ('0')", function(err, rows) {
-                            if (err) return omdoll.say(nick, "입력하는 도중 오류가 발생했어요.");
-                            else {
-                                var obj = {
-                                    "uid": auth.uid,
-                                    "data_srl": rows.insertId,
-                                    "icon_srl": 18866326,
-                                    "title": "SP11",
-                                    "member_srl": auth.uid,
-                                    "user_id": auth.user_id,
-                                    "nick_name": auth.nick_name,
-                                    "is_selected": "N",
-                                    "ipaddress": "0.0.0.0"
-                                };
-                                _sql.query("INSERT INTO `pvpgn_iconshop_member` SET ?", obj, function (err, rows) {
-                                    if (err) {
-                                        console.error(err.stack);
-                                        omdoll.say(nick, "ERROR! - 지급 오류");
-                                    }
-                                    else {
-                                        omdoll.say(nick, "이벤트 아이콘이 지급되었어요.");
-                                    }
-                                });
-                            }
-                        });
+    //_sql.getConnection(function (err, conn) {
+    //    if (err) return console.error(err.stack);
+        async.parallel([
+            function (callback) {
+                _sql.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(nick), function (err, rows) {
+                    if (err) callback(err);
+                    if (rows.length) {
+                        omdoll.say(channel, "[" + nick + "] " + rows[0].message);
+                        callback(null, null);
                     }
                 });
+            },
 
+            function (callback) {
+                _sql.query("SELECT * FROM `pvpgn_omdoll_personal_channel` WHERE `user_id` = ? AND `perch_name` = ? ", [nick, channel], function (err, rows) {
+                    if (err) callback(err);
+                    if (rows.length) {
+                        omdoll.send("BOTTMPOP", channel, nick);
+                        callback(null, null);
+                    }
+                });
             }
-        })
-    }
 
-
-    else {
-        _sql.getConnection(function (err, conn) {
-            async.parallel([
-                function (callback) {
-                    conn.query("SELECT * FROM `pvpgn_omdoll_hello` WHERE `user_id` = " + mysql.escape(nick), function (err, rows) {
-                        if (err) callback(err);
-                        if (rows.length) {
-                            omdoll.say(channel, "[" + nick + "] " + rows[0].message);
-                            callback(null, null);
-                        }
-                    });
-                },
-
-                function (callback) {
-                    conn.query("SELECT * FROM `pvpgn_omdoll_personal_channel` WHERE `user_id` = ? AND `perch_name` = ? ", [nick, channel], function (err, rows) {
-                        if (err) callback(err);
-                        if (rows.length) {
-                            omdoll.send("BOTTMPOP", channel, nick);
-                            callback(null, null);
-                        }
-                    });
-                }
-
-            ], function (err) {
-                if (err) {
-                    console.error(err.stack);
-                }
-                conn.release();
-            });
+        ], function (err) {
+            if (err) {
+                omdoll.say(channel, err);
+                console.error(err.stack);
+            }
         });
-    }
+    //});
 });
